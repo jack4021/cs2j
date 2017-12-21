@@ -499,7 +499,7 @@ namespace Twiglet.CS2J.Translator
                    AppEnv.Add(txKey, t);
                 }
             } catch (Exception e) {
-                Console.WriteLine ("WARNING -- Could not import " + fullName + " (" + e.Message + ")");
+                throw new Exception("Could not import " + fullName + " (" + e.Message + ")" + Environment.NewLine + e);
             }
         }
 
