@@ -434,12 +434,55 @@ namespace Twiglet.CS2J.Translator
             }
         }
 
+        private static ICharStream PreProcessInputFile(string fullFileName)
+        {
+            string[] srcFileLines = File.ReadAllLines(fullFileName);
+            for (int i = 0; i < srcFileLines.Length; i++)
+            {
+                // no need to check lines that start with a comment
+                if (!srcFileLines[i].TrimStart().StartsWith("//"))
+                {
+                    int commentStart = srcFileLines[i].IndexOf("//");
+
+                    // CS2J can handle Nullable<int> via a translation template, but it can't
+                    // handle int? because it doesn't recognize that int? is just syntactic sugar for Nullable<int>
+                    // This should be handled by changing the C# grammar file, but the code generated from the grammar file
+                    // has also been checked in and is being used, so it's unclear what we'd run into trying to re-generate it.
+                    //
+                    // So, this code just replaces nullables written like: int? with the Nullable<int> form.
+                    // It specifically does this in method signatures, other instances will have to be written out
+                    //
+                    // Regex explanation:
+                    //  (\(|,) either a ( or , (to narrow this down to a parameter in a method signature)
+                    // \s* 0 or more whitespace characters
+                    // (\b\w+\?) word boundary, word characters, literal ? (eg: int?)
+                    //
+                    srcFileLines[i] = Regex.Replace(srcFileLines[i], @"(\(|,)\s*(\b\w+\?)", (Match m) =>
+                        {
+                            // only replace if this line is not a comment, or the comment starts after the located nullable
+                            if (commentStart < 0 || commentStart > m.Index)
+                            {
+                                // replace this particular match in the source string
+                                string matched = m.Groups[2].Value;
+                                string replacement = "Nullable<" + matched.Substring(0, matched.Length -1) + ">";
+                                return m.Groups[1].Value + replacement;
+                            }else
+                            {
+                                return m.Value;
+                            }
+                        }
+                    );
+                }
+            }
+
+            return new ANTLRStringStream(String.Join(Environment.NewLine, srcFileLines));
+        }
+
         public static CommonTreeNodeStream parseFile(string fullName)
         {
-            
             if (cfg.Verbosity > 2) Console.WriteLine("Parsing " + Path.GetFileName(fullName));
-            
-            ICharStream input = new ANTLRFileStream(fullName);
+
+            ICharStream input = PreProcessInputFile(fullName);
 
             PreProcessor lex = new PreProcessor();
             lex.AddDefine(cfg.MacroDefines);
