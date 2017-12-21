@@ -2592,11 +2592,17 @@ namespace Twiglet.CS2J.Translator.TypeRep
       {
          object o = null;
 	
-         // Create the XmlReader object.
-         // XmlReader reader = XmlReader.Create(fs, TemplateReaderSettings);
-		
          XmlSerializer serializer = new XmlSerializer (t, Constants.TranslationTemplateNamespace);
-         //o = serializer.Deserialize (reader);
+         serializer.UnknownNode += (Object sender, XmlNodeEventArgs args) =>
+         {
+             if (args.Name == "Signature")
+             {
+                 // signature is present in many definitions, but not "expected"
+                 return;
+             }
+             throw new Exception("Parse Failed, line: " + args.LineNumber + " unexpected node: " + args.Name);
+         };
+
          o = serializer.Deserialize (fs);
          return o;
       }

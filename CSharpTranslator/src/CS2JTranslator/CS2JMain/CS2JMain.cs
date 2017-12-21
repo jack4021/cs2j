@@ -434,12 +434,55 @@ namespace Twiglet.CS2J.Translator
             }
         }
 
+        private static ICharStream PreProcessInputFile(string fullFileName)
+        {
+            string[] srcFileLines = File.ReadAllLines(fullFileName);
+            for (int i = 0; i < srcFileLines.Length; i++)
+            {
+                // no need to check lines that start with a comment
+                if (!srcFileLines[i].TrimStart().StartsWith("//"))
+                {
+                    int commentStart = srcFileLines[i].IndexOf("//");
+
+                    // CS2J can handle Nullable<int> via a translation template, but it can't
+                    // handle int? because it doesn't recognize that int? is just syntactic sugar for Nullable<int>
+                    // This should be handled by changing the C# grammar file, but the code generated from the grammar file
+                    // has also been checked in and is being used, so it's unclear what we'd run into trying to re-generate it.
+                    //
+                    // So, this code just replaces nullables written like: int? with the Nullable<int> form.
+                    // It specifically does this in method signatures, other instances will have to be written out
+                    //
+                    // Regex explanation:
+                    //  (\(|,) either a ( or , (to narrow this down to a parameter in a method signature)
+                    // \s* 0 or more whitespace characters
+                    // (\b\w+\?) word boundary, word characters, literal ? (eg: int?)
+                    //
+                    srcFileLines[i] = Regex.Replace(srcFileLines[i], @"(\(|,)\s*(\b\w+\?)", (Match m) =>
+                        {
+                            // only replace if this line is not a comment, or the comment starts after the located nullable
+                            if (commentStart < 0 || commentStart > m.Index)
+                            {
+                                // replace this particular match in the source string
+                                string matched = m.Groups[2].Value;
+                                string replacement = "Nullable<" + matched.Substring(0, matched.Length -1) + ">";
+                                return m.Groups[1].Value + replacement;
+                            }else
+                            {
+                                return m.Value;
+                            }
+                        }
+                    );
+                }
+            }
+
+            return new ANTLRStringStream(String.Join(Environment.NewLine, srcFileLines));
+        }
+
         public static CommonTreeNodeStream parseFile(string fullName)
         {
-            
             if (cfg.Verbosity > 2) Console.WriteLine("Parsing " + Path.GetFileName(fullName));
-            
-            ICharStream input = new ANTLRFileStream(fullName);
+
+            ICharStream input = PreProcessInputFile(fullName);
 
             PreProcessor lex = new PreProcessor();
             lex.AddDefine(cfg.MacroDefines);
@@ -479,53 +522,6 @@ namespace Twiglet.CS2J.Translator
         }
 
 
-       // Verify the signature of an XML file against an asymmetric 
-       // algorithm and return the result.
-       public static Boolean VerifyXml(XmlDocument Doc, RSA Key)
-       {
-          // Check arguments.
-          if (Doc == null)
-             throw new ArgumentException("Doc");
-          if (Key == null)
-             throw new ArgumentException("Key");
-			
-          // Add the namespace.
-          XmlNamespaceManager nsmgr = new XmlNamespaceManager(Doc.NameTable);
-          nsmgr.AddNamespace("ss", "http://www.w3.org/2000/09/xmldsig#");
-
-          XmlNode root = Doc.DocumentElement;
-          XmlNodeList nodeList = root.SelectNodes("/*/ss:Signature", nsmgr);
-          // fail if no signature was found.
-          if (nodeList.Count != 1)
-          {
-             return false;
-          }
-
-          // Create a new SignedXml object and pass it
-          // the XML document class.
-          SignedXml signedXml = new SignedXml(Doc);
-
-
-          // Load the first <signature> node.  
-          signedXml.LoadXml((XmlElement)nodeList[0]);
-
-          // Check the signature and return the result.
-          return signedXml.CheckSignature(Key);
-       }
-
-        // Here's where we do the real work...
-        public static void addNetSchema(string fullName)
-        {
-           try
-           {
-              TypeRepTemplate.TemplateReaderSettings.Schemas.Add("urn:www.twigletsoftware.com:schemas:txtemplate:1:0", fullName);
-           }
-           catch (Exception e)
-           {
-              Console.Error.WriteLine("{0} error: {1}", fullName, e.Message);
-           }
-        }
-
         // Here's where we do the real work...
         public static void addNetTranslation(string fullName)
         {
@@ -546,7 +542,7 @@ namespace Twiglet.CS2J.Translator
                    AppEnv.Add(txKey, t);
                 }
             } catch (Exception e) {
-                Console.WriteLine ("WARNING -- Could not import " + fullName + " (" + e.Message + ")");
+                throw new Exception("Could not import " + fullName + " (" + e.Message + ")" + Environment.NewLine + e);
             }
         }
 
