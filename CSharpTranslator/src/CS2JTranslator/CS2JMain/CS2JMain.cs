@@ -479,53 +479,6 @@ namespace Twiglet.CS2J.Translator
         }
 
 
-       // Verify the signature of an XML file against an asymmetric 
-       // algorithm and return the result.
-       public static Boolean VerifyXml(XmlDocument Doc, RSA Key)
-       {
-          // Check arguments.
-          if (Doc == null)
-             throw new ArgumentException("Doc");
-          if (Key == null)
-             throw new ArgumentException("Key");
-			
-          // Add the namespace.
-          XmlNamespaceManager nsmgr = new XmlNamespaceManager(Doc.NameTable);
-          nsmgr.AddNamespace("ss", "http://www.w3.org/2000/09/xmldsig#");
-
-          XmlNode root = Doc.DocumentElement;
-          XmlNodeList nodeList = root.SelectNodes("/*/ss:Signature", nsmgr);
-          // fail if no signature was found.
-          if (nodeList.Count != 1)
-          {
-             return false;
-          }
-
-          // Create a new SignedXml object and pass it
-          // the XML document class.
-          SignedXml signedXml = new SignedXml(Doc);
-
-
-          // Load the first <signature> node.  
-          signedXml.LoadXml((XmlElement)nodeList[0]);
-
-          // Check the signature and return the result.
-          return signedXml.CheckSignature(Key);
-       }
-
-        // Here's where we do the real work...
-        public static void addNetSchema(string fullName)
-        {
-           try
-           {
-              TypeRepTemplate.TemplateReaderSettings.Schemas.Add("urn:www.twigletsoftware.com:schemas:txtemplate:1:0", fullName);
-           }
-           catch (Exception e)
-           {
-              Console.Error.WriteLine("{0} error: {1}", fullName, e.Message);
-           }
-        }
-
         // Here's where we do the real work...
         public static void addNetTranslation(string fullName)
         {
