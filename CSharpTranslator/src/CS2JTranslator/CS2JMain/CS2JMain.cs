@@ -454,16 +454,17 @@ namespace Twiglet.CS2J.Translator
                     //
                     // Regex explanation:
                     //  (\(|,) either a ( or , (to narrow this down to a parameter in a method signature)
+                    // |(public|private)\s(static\s)?) -- or a declaration, which may be static
                     // \s* 0 or more whitespace characters
-                    // (\b\w+\?) word boundary, word characters, literal ? (eg: int?)
+                    // (\b\w+\?) word boundary, word characters (or literal . to allow including namespace in type), literal ? (eg: int?)
                     //
-                    srcFileLines[i] = Regex.Replace(srcFileLines[i], @"(\(|,)\s*(\b\w+\?)", (Match m) =>
+                    srcFileLines[i] = Regex.Replace(srcFileLines[i], @"(\(|,|(public|private)\s(static\s)?)\s*(\b[\w\.]+\?)", (Match m) =>
                         {
                             // only replace if this line is not a comment, or the comment starts after the located nullable
                             if (commentStart < 0 || commentStart > m.Index)
                             {
                                 // replace this particular match in the source string
-                                string matched = m.Groups[2].Value;
+                                string matched = m.Groups[4].Value;
                                 string replacement = "Nullable<" + matched.Substring(0, matched.Length -1) + ">";
                                 return m.Groups[1].Value + replacement;
                             }else
