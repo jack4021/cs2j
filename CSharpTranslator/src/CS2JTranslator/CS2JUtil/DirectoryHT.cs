@@ -18,6 +18,7 @@ along with this program.  If not, see
 using System;
 using System.Text;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 
 /*
@@ -391,6 +392,7 @@ namespace Twiglet.CS2J.Translator.Utils
            Add(key, value, Default);
         }
 
+        [MethodImpl(MethodImplOptions.Synchronized)]
         public void Add(string key, TValue value, string variant)
         {
             string[] components = key.Split(new char[] { '.' }, 2);
