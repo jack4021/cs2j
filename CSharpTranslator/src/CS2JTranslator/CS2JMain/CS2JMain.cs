@@ -41,6 +41,7 @@ using Twiglet.CS2J.Translator.TypeRep;
 using CS2JConstants = Twiglet.CS2J.Translator.Utils.Constants;
 using Twiglet.CS2J.Translator.Extract;
 using Nini.Config;
+using System.Threading.Tasks;
 
 namespace Twiglet.CS2J.Translator
 {
@@ -52,7 +53,10 @@ namespace Twiglet.CS2J.Translator
        private static StringTemplateGroup templates = null;
        private static bool doEarlyExit = false;
 
-       private static XmlTextWriter enumXmlWriter = null;			
+       private static XmlTextWriter enumXmlWriter = null;
+
+       private static List<System.Action> definitionTasks = new List<System.Action>();
+       private static List<System.Action> translationTasks = new List<System.Action>();
 
        public delegate void FileProcessor(string fName);
 
@@ -242,6 +246,7 @@ namespace Twiglet.CS2J.Translator
                     OptionSet p = new OptionSet ()
                         .Add ("config=", f => updateFromConfigFile(f, cfg))
                         .Add ("v", v => cfg.Verbosity = cfg.OptVerbosity.IsDefault ? 1 : cfg.Verbosity + 1)
+                        .Add ("threads=", t => cfg.Parallelism = Int32.Parse(t))
                         .Add ("debug=", v => cfg.DebugLevel = Int32.Parse(v))
                         .Add ("debug-template-extraction:", v => cfg.DebugTemplateExtraction = parseBoolOption(v))
                         .Add ("warnings:", v => cfg.Warnings = parseBoolOption(v))
@@ -294,6 +299,8 @@ namespace Twiglet.CS2J.Translator
                        }
                     }
 
+                    ParallelOptions taskOptions = new ParallelOptions { MaxDegreeOfParallelism = cfg.Parallelism };
+
                     if (cfg.Verbosity > 0) showVersion();
 
                     if (doHelp) showUsage();
@@ -345,6 +352,9 @@ namespace Twiglet.CS2J.Translator
                     }
                     foreach (string r in cfg.AppRoot)
                         doFile(r, ".cs", addAppSigTranslation, cfg.ExAppRoot); // parse it
+
+                    Parallel.Invoke(taskOptions, definitionTasks.ToArray());
+
                     if (cfg.DumpEnums) {
                         enumXmlWriter = new XmlTextWriter(cfg.EnumDir, System.Text.Encoding.UTF8);
                         enumXmlWriter.WriteStartElement("enums");
@@ -391,6 +401,7 @@ namespace Twiglet.CS2J.Translator
                         enumXmlWriter.WriteEndElement();
                         enumXmlWriter.Close();
                     }
+                    Parallel.Invoke(taskOptions, translationTasks.ToArray());
                 }
                 else
                 {
@@ -523,8 +534,13 @@ namespace Twiglet.CS2J.Translator
         }
 
 
-        // Here's where we do the real work...
         public static void addNetTranslation(string fullName)
+        {
+            definitionTasks.Add(new System.Action(() => doAddNetTranslation(fullName)));
+        }
+
+        // Here's where we do the real work...
+        public static void doAddNetTranslation(string fullName)
         {
 			
 			// Suck in translation file
@@ -547,8 +563,13 @@ namespace Twiglet.CS2J.Translator
             }
         }
 
-        // Here's where we do the real work...
         public static void addAppSigTranslation(string fullName)
+        {
+            definitionTasks.Add(new System.Action(() => doAddAppSigTranslation(fullName)));
+        }
+
+        // Here's where we do the real work...
+        public static void doAddAppSigTranslation(string fullName)
         {
                 
             int saveDebugLevel = cfg.DebugLevel;
@@ -572,9 +593,14 @@ namespace Twiglet.CS2J.Translator
             }
             cfg.DebugLevel = saveDebugLevel;
         }
-		
-        // Here's where we do the real work...		
+
         public static void translateFile(string fullName)
+        {
+            translationTasks.Add(new System.Action(() => doTranslateFile(fullName)));
+        }
+
+        // Here's where we do the real work...		
+        public static void doTranslateFile(string fullName)
         {
             long startTime = DateTime.Now.Ticks;
             if (cfg.DebugLevel > 3) Console.Out.WriteLine("Translating file {0}", fullName);

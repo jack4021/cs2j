@@ -461,6 +461,27 @@ namespace Twiglet.CS2J.Translator
                }
             }
 
+            // Parallelism
+            private CS2JOption<int> optParallelism = new CS2JOption<int>();
+            public CS2JOption<int> OptParallelism
+            {
+                get
+                {
+                    return optParallelism;
+                }
+            }
+            public int Parallelism
+            {
+                get
+                {
+                    return optParallelism.Value;
+                }
+                set
+                {
+                    optParallelism.Value = value;
+                }
+            }
+
             // KeyFile
             private CS2JOption<string> optKeyFile = new CS2JOption<string>();
             public CS2JOption<string> OptKeyFile { 
@@ -797,6 +818,7 @@ namespace Twiglet.CS2J.Translator
 	        OptWarnings.SetDefault(true);		
 	        OptWarningsFailedResolves.SetDefault(false);		
 
+                OptParallelism.SetDefault(1);
                 OptTranslatorKeepParens.SetDefault(true);
                 OptTranslatorAddTimeStamp.SetDefault(true);
                 OptTranslatorExceptionIsThrowable.SetDefault(false);
