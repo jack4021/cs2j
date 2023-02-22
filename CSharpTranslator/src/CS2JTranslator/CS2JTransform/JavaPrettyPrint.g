@@ -1109,12 +1109,9 @@ non_assignment_expression returns [int precedence]
 lambda_expression:
 	anonymous_function_signature?   '=>'   block 
         { 
-            StringTemplate lambdaText = %lambda();
-            %{lambdaText}.args = $anonymous_function_signature.st;
-            %{lambdaText}.body = $block.st;
-            $st = %unsupported();
-            %{$st}.reason = "to translate lambda expressions we need an explicit delegate type, try adding a cast";
-            %{$st}.text = lambdaText;
+            $st = %java_lambda();
+            %{$st}.args = $anonymous_function_signature.st;
+            %{$st}.body = $block.st;
         }
    ;
 anonymous_function_signature:

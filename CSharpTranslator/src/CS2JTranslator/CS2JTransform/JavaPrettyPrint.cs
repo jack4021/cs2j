@@ -10988,12 +10988,9 @@ namespace  Twiglet.CS2J.Translator.Transform
                 	if ( (state.backtracking==0) )
                 	{
                 	   
-                	              StringTemplate lambdaText = templateLib.GetInstanceOf("lambda");
-                	              (lambdaText).SetAttribute("args", ((anonymous_function_signature109 != null) ? anonymous_function_signature109.ST : null));
-                	              (lambdaText).SetAttribute("body", ((block110 != null) ? block110.ST : null));
-                	              retval.ST =  templateLib.GetInstanceOf("unsupported");
-                	              (retval.ST).SetAttribute("reason", "to translate lambda expressions we need an explicit delegate type, try adding a cast");
-                	              (retval.ST).SetAttribute("text", lambdaText);
+                	              retval.ST =  templateLib.GetInstanceOf("java_lambda");
+                	              (retval.ST).SetAttribute("args", ((anonymous_function_signature109 != null) ? anonymous_function_signature109.ST : null));
+                	              (retval.ST).SetAttribute("body", ((block110 != null) ? block110.ST : null));
                 	          
                 	}
 
