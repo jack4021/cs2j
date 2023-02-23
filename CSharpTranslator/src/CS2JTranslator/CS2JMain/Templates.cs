@@ -341,6 +341,9 @@ seplist(items,sep) ::= <<
 
 unsupported(reason, text) ::= ""/* [UNSUPPORTED] <reason> \""<text>\"" */""
 
+java_lambda(args, body) ::= <<
+(<args>) -> <body>
+>>
 
 // ******* UTILITY ***********
 string(payload) ::= ""<payload>""
